@@ -14,7 +14,8 @@ function App() {
     "Order Picked": 0,
   });
 
-  const startStageTimer = (id, startTime, stage) => {
+  const startStageTimer = (id, startTime, stage, pizzaSize) => {
+    console.log("pizzaSize", pizzaSize);
     const intervalId = setInterval(() => {
       setOrders((prevOrders) =>
         prevOrders.map((o) => {
@@ -24,7 +25,15 @@ function App() {
             const seconds = elapsedTime % 60;
             const remainingTime = `${minutes} min ${seconds} sec`;
 
-            const stageDuration = 180; // 3 minutes in seconds
+            // const stageDuration = 180; // 3 minutes in seconds
+            let stageDuration =
+              pizzaSize === "small"
+                ? 180 // 3 minutes in seconds
+                : pizzaSize === "medium"
+                ? 240 // 4 minutes in seconds
+                : pizzaSize === "large"
+                ? 300 // 5 minutes in seconds
+                : 180;
             const isStageExceeded = elapsedTime > stageDuration;
 
             const updatedTimeSpent = { ...timeSpentOnStages };
@@ -96,7 +105,7 @@ function App() {
       };
       setOrders((prev) => [...prev, order]);
       setLimitedOrders((prev) => [...prev, order]);
-      startStageTimer(id, startTime, "Order Placed");
+      startStageTimer(id, startTime, "Order Placed", newOrder?.size);
     }
   };
 
@@ -141,7 +150,7 @@ function App() {
   };
 
   useEffect(() => {
-    console.log("order", orders, "all", limitedOrders);
+    console.log("order", orders, "limited orders", limitedOrders);
   });
 
   return (
