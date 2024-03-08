@@ -1,4 +1,4 @@
-const PizzaCard = ({ order, moveOrder, cancelOrder }) => {
+const PizzaCard = ({ order, moveOrder }) => {
   const { id, stage, remainingTime, isStageExceeded } = order;
 
   const handleMoveOrder = () => {
@@ -11,25 +11,20 @@ const PizzaCard = ({ order, moveOrder, cancelOrder }) => {
     } else if (stage === "Order Ready") {
       nextStage = "Order Picked";
     }
-
     moveOrder(id, nextStage);
-  };
-
-  const handleCancelOrder = () => {
-    cancelOrder(id);
   };
 
   return (
     <div
       style={{
         border: "2px solid black",
-
         borderRadius: "5px",
         padding: "10px",
         backgroundColor: isStageExceeded ? "red" : "white",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
+        marginBottom: "10px",
       }}
     >
       {stage === "Order Picked" ? (
@@ -44,9 +39,6 @@ const PizzaCard = ({ order, moveOrder, cancelOrder }) => {
           <button onClick={() => handleMoveOrder()}>Next</button>
         </div>
       )}
-
-      {/* <button onClick={() => handleMoveOrder("picked")}>Picked</button>
-      <button onClick={handleCancelOrder}>Cancel</button> */}
     </div>
   );
 };

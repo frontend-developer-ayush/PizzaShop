@@ -5,7 +5,55 @@ import "./App.css";
 
 function App() {
   const [orders, setOrders] = useState([]);
-  let intervalId;
+  const [timeSpentOnStages, setTimeSpentOnStages] = useState({
+    "Order Placed": 0,
+    "Order is making": 0,
+    "Order Ready": 0,
+    "Order Picked": 0,
+  });
+
+  const startStageTimer = (id, startTime, stage) => {
+    const intervalId = setInterval(() => {
+      setOrders((prevOrders) =>
+        prevOrders.map((o) => {
+          if (o.id === id) {
+            const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsedTime / 60);
+            const seconds = elapsedTime % 60;
+            const remainingTime = `${minutes} min ${seconds} sec`;
+
+            const stageDuration = 180; // 3 minutes in seconds
+            const isStageExceeded = elapsedTime > stageDuration;
+
+            const updatedTimeSpent = { ...timeSpentOnStages };
+            updatedTimeSpent[stage] += elapsedTime;
+
+            return {
+              ...o,
+              remainingTime,
+              isStageExceeded,
+              timeSpent: { ...o.timeSpent, [stage]: elapsedTime },
+            };
+          } else {
+            return o;
+          }
+        })
+      );
+      setTimeSpentOnStages((prev) => ({
+        ...prev,
+        [stage]: prev[stage] + 1,
+      }));
+    }, 1000);
+    setOrders((prevOrders) =>
+      prevOrders.map((o) => {
+        if (o.id === id) {
+          return { ...o, intervalId };
+        } else {
+          return o;
+        }
+      })
+    );
+  };
 
   const placeOrder = (newOrder) => {
     if (orders?.length === 10) {
@@ -21,43 +69,19 @@ function App() {
         remainingTime: "0 min 0 sec",
         startTime,
         isStageExceeded: false,
+        timeSpent: {
+          "Order Placed": 0,
+          "Order is making": 0,
+          "Order Ready": 0,
+          "Order Picked": 0,
+        },
       };
-      // setOrders([...orders, order]);
       setOrders((prev) => [...prev, order]);
-      // Increment remainingTime every second
-      intervalId = setInterval(() => {
-        setOrders((prevOrders) =>
-          prevOrders.map((o) => {
-            if (o.id === id) {
-              const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-              const minutes = Math.floor(elapsedTime / 60);
-              const seconds = elapsedTime % 60;
-              const remainingTime = `${minutes} min ${seconds} sec`;
-
-              // Highlight with red if the order remains in the same stage for more than 3 minutes
-              const stageDuration = 180; // 3 minutes in seconds
-              const isStageExceeded = elapsedTime > stageDuration;
-              return { ...o, remainingTime, isStageExceeded };
-            } else {
-              return o;
-            }
-          })
-        );
-      }, 1000);
-      setOrders((prevOrders) =>
-        prevOrders.map((o) => {
-          if (o.id === id) {
-            return { ...o, intervalId };
-          } else {
-            return o;
-          }
-        })
-      );
+      startStageTimer(id, startTime, "Order Placed");
     }
   };
 
   const moveOrder = (id, nextStage) => {
-    console.log("id", id, nextStage);
     // Clear interval for the order being moved
     setOrders((prevOrders) =>
       prevOrders.map((o) => {
@@ -68,12 +92,12 @@ function App() {
       })
     );
 
-    // Clear intervals for all orders
-    // orders.forEach((order) => clearInterval(order.intervalId));
-
     const updatedOrders = orders?.map((order) => {
       if (order?.id === id) {
-        return { ...order, stage: nextStage };
+        const elapsedTime = Math.floor((Date.now() - order.startTime) / 1000);
+        const updatedTimeSpent = { ...order.timeSpent };
+        updatedTimeSpent[order.stage] += elapsedTime;
+        return { ...order, stage: nextStage, timeSpent: updatedTimeSpent };
       }
       return order;
     });
@@ -82,47 +106,13 @@ function App() {
     if (nextStage !== "Order Picked") {
       // Start timer for the next stage
       const nextStageStartTime = Date.now();
-      const nextStageIntervalId = setInterval(() => {
-        // Calculate remaining time for the next stage
-        setOrders((prevOrders) =>
-          prevOrders.map((o) => {
-            if (o.id === id) {
-              const elapsedTime = Math.floor(
-                (Date.now() - nextStageStartTime) / 1000
-              );
-              const minutes = Math.floor(elapsedTime / 60);
-              const seconds = elapsedTime % 60;
-              const remainingTime = `${minutes} min ${seconds} sec`;
-
-              // Highlight with red if the order remains in the same stage for more than 3 minutes
-              const stageDuration = 180; // 3 minutes in seconds
-              const isStageExceeded = elapsedTime > stageDuration;
-              return { ...o, remainingTime, isStageExceeded };
-            } else {
-              return o;
-            }
-          })
-        );
-      }, 1000);
-
-      // Save interval ID for the next stage in the order object
-      setOrders((prevOrders) =>
-        prevOrders.map((o) => {
-          if (o.id === id) {
-            return { ...o, intervalId: nextStageIntervalId };
-          } else {
-            return o;
-          }
-        })
-      );
+      startStageTimer(id, nextStageStartTime, nextStage);
     }
   };
 
   const totalOrdersDelivered = orders?.filter((order) => {
     return order?.stage === "Order Picked";
   });
-
-  console.log("total", totalOrdersDelivered);
 
   const cancelOrder = (id) => {
     // Clear interval for the order being moved
@@ -136,6 +126,13 @@ function App() {
     );
     const updatedOrders = orders.filter((order) => order.id !== id);
     setOrders(updatedOrders);
+  };
+
+  const calculateTotalTimeSpent = (timeSpent) => {
+    const total = Object.values(timeSpent).reduce((acc, cur) => acc + cur, 0);
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    return `${minutes} min ${seconds} sec`;
   };
 
   useEffect(() => {
@@ -152,7 +149,6 @@ function App() {
         </div>
         <div
           style={{
-            // height: "250px",
             display: "flex",
             justifyContent: "space-between",
             border: "1px solid black",
@@ -265,7 +261,7 @@ function App() {
                   <tr>
                     <td>Order Id: {order?.id}</td>
                     <td>{order?.stage}</td>
-                    <td>ayush</td>
+                    <td>{calculateTotalTimeSpent(order.timeSpent)}</td>
                     <td>
                       {(order?.stage === "Order Placed" ||
                         order?.stage === "Order is making") && (
