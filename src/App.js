@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import PizzaForm from "./components/PizzaForm";
-import PizzaCard from "./components/PizzaCard";
+import PizzaStagesSection from "./components/PizzaStagesSection";
+import MainSection from "./components/MainSection";
 import "./App.css";
 
 function App() {
+  const [limitedOrders, setLimitedOrders] = useState([]);
   const [orders, setOrders] = useState([]);
   const [timeSpentOnStages, setTimeSpentOnStages] = useState({
     "Order Placed": 0,
@@ -55,8 +57,24 @@ function App() {
     );
   };
 
+  const clearPreviousStageInterval = (id) => {
+    setOrders((prevOrders) =>
+      prevOrders.map((o) => {
+        if (o.id === id) {
+          clearInterval(o.intervalId);
+        }
+        return o;
+      })
+    );
+  };
+
+  const updateLimitedOrders = (id) => {
+    const updatedOrders = limitedOrders.filter((order) => order.id !== id);
+    setLimitedOrders(updatedOrders);
+  };
+
   const placeOrder = (newOrder) => {
-    if (orders?.length === 10) {
+    if (limitedOrders?.length === 2) {
       alert("Not taking any order for now!");
     } else {
       // Generate unique ID for the new order
@@ -77,21 +95,13 @@ function App() {
         },
       };
       setOrders((prev) => [...prev, order]);
+      setLimitedOrders((prev) => [...prev, order]);
       startStageTimer(id, startTime, "Order Placed");
     }
   };
 
   const moveOrder = (id, nextStage) => {
-    // Clear interval for the order being moved
-    setOrders((prevOrders) =>
-      prevOrders.map((o) => {
-        if (o.id === id) {
-          clearInterval(o.intervalId);
-        }
-        return o;
-      })
-    );
-
+    clearPreviousStageInterval(id);
     const updatedOrders = orders?.map((order) => {
       if (order?.id === id) {
         const elapsedTime = Math.floor((Date.now() - order.startTime) / 1000);
@@ -107,6 +117,8 @@ function App() {
       // Start timer for the next stage
       const nextStageStartTime = Date.now();
       startStageTimer(id, nextStageStartTime, nextStage);
+    } else {
+      updateLimitedOrders(id);
     }
   };
 
@@ -115,15 +127,8 @@ function App() {
   });
 
   const cancelOrder = (id) => {
-    // Clear interval for the order being moved
-    setOrders((prevOrders) =>
-      prevOrders.map((o) => {
-        if (o.id === id) {
-          clearInterval(o.intervalId);
-        }
-        return o;
-      })
-    );
+    clearPreviousStageInterval(id);
+    updateLimitedOrders(id);
     const updatedOrders = orders.filter((order) => order.id !== id);
     setOrders(updatedOrders);
   };
@@ -136,153 +141,24 @@ function App() {
   };
 
   useEffect(() => {
-    console.log("order", orders);
+    console.log("order", orders, "all", limitedOrders);
   });
 
   return (
-    <div className="App">
+    <>
       <PizzaForm placeOrder={placeOrder} />
-      {/* pizza stage */}
-      <div style={{ margin: "30px" }}>
-        <div style={{ margin: "10px" }}>
-          <h3>Pizza Stages Section</h3>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            border: "1px solid black",
-          }}
-        >
-          <div
-            style={{
-              border: "1px solid black",
-              padding: "20px",
-              flex: 1,
-            }}
-          >
-            <h5>Order Placed</h5>
-            {orders.map((order) => {
-              if (order?.stage === "Order Placed") {
-                return (
-                  <PizzaCard
-                    key={order.id}
-                    order={order}
-                    moveOrder={moveOrder}
-                    cancelOrder={cancelOrder}
-                  />
-                );
-              }
-            })}
-          </div>
-          <div
-            style={{
-              border: "1px solid black",
-              padding: "20px",
-              flex: 1,
-            }}
-          >
-            <h5>Order is making</h5>
-            {orders.map((order) => {
-              if (order?.stage === "Order is making") {
-                return (
-                  <PizzaCard
-                    key={order.id}
-                    order={order}
-                    moveOrder={moveOrder}
-                    cancelOrder={cancelOrder}
-                  />
-                );
-              }
-            })}
-          </div>
-          <div
-            style={{
-              border: "1px solid black",
-              padding: "20px",
-              flex: 1,
-            }}
-          >
-            <h5>Order Ready</h5>
-            {orders.map((order) => {
-              if (order?.stage === "Order Ready") {
-                return (
-                  <PizzaCard
-                    key={order.id}
-                    order={order}
-                    moveOrder={moveOrder}
-                    cancelOrder={cancelOrder}
-                  />
-                );
-              }
-            })}
-          </div>
-          <div
-            style={{
-              border: "1px solid black",
-              padding: "20px",
-              flex: 1,
-            }}
-          >
-            <h5>Order picked</h5>
-            {orders.map((order) => {
-              if (order?.stage === "Order Picked") {
-                return (
-                  <PizzaCard
-                    key={order.id}
-                    order={order}
-                    moveOrder={moveOrder}
-                    cancelOrder={cancelOrder}
-                  />
-                );
-              }
-            })}
-          </div>
-        </div>
-      </div>
-      {/* main section */}
-      <div style={{ margin: "20px" }}>
-        <div>
-          <h3>Main Section</h3>
-        </div>
-        <div>
-          <table>
-            <thead>
-              <tr>
-                <th>Order Id</th>
-                <th>Stage</th>
-                <th>Total time spent (time from order placed)</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders?.map((order) => {
-                return (
-                  <tr>
-                    <td>Order Id: {order?.id}</td>
-                    <td>{order?.stage}</td>
-                    <td>{calculateTotalTimeSpent(order.timeSpent)}</td>
-                    <td>
-                      {(order?.stage === "Order Placed" ||
-                        order?.stage === "Order is making") && (
-                        <button onClick={() => cancelOrder(order?.id)}>
-                          Cancel
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              <tr>
-                <td>Total order delivered</td>
-                <td colSpan={2}>{totalOrdersDelivered?.length}</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      <PizzaStagesSection
+        orders={orders}
+        moveOrder={moveOrder}
+        cancelOrder={cancelOrder}
+      />
+      <MainSection
+        orders={orders}
+        cancelOrder={cancelOrder}
+        calculateTotalTimeSpent={calculateTotalTimeSpent}
+        totalOrdersDelivered={totalOrdersDelivered}
+      />
+    </>
   );
 }
 
