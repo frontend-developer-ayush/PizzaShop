@@ -74,7 +74,7 @@ function App() {
   };
 
   const placeOrder = (newOrder) => {
-    if (limitedOrders?.length === 2) {
+    if (limitedOrders?.length === 10) {
       alert("Not taking any order for now!");
     } else {
       // Generate unique ID for the new order
